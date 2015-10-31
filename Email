@@ -1,0 +1,173 @@
+#coding:utf-8
+import smtplib
+#PS:smtp_svr,smtp_server都不能用，因为名字冲突
+
+class Send:
+    def __init__(self,smtp_svr,smtp_user,smtp_password):
+        self.s_svr=smtp_svr
+        self.s_user=smtp_user
+        self.s_password=smtp_password
+
+    def get_smtp_conn(self):
+        try:
+            smtp=smtplib.SMTP(self.s_svr)
+            smtp.login(self.s_user,self.s_password)
+            return smtp
+        except:
+            return None
+    
+
+    #通过MIMEText类，构造纯文本消息，并发送
+    def plain(self,_from,_to,_subject,_content): 
+        assert type(_to) == list   
+        from email.mime.text import MIMEText
+        smtp=self.get_smtp_conn()
+        if(smtp):
+            try:
+                msg_text = MIMEText(_content)
+                msg_text['From'] =_from
+                msg_text['To'] = ','.join(_to)
+                msg_text['Subject'] = _subject
+                smtp.sendmail(_from,_to,msg_text.as_string())
+                return 0
+            except:
+                return 1
+            else:
+                smtp.close()
+
+    #通过MIMEText类，构造html文本消息，并发送
+    #邮件跨域引用资源，例如不能使用<img src="https://www.baidu.com/img/bd_logo1.png"/>,发送会直接失败
+    #可以使用<h1>标题</h1>,类似这样的html标签
+    def html_1(self,_from,_to,_subject,_content):  
+        assert type(_to) == list
+        from email.mime.text import MIMEText
+        smtp=self.get_smtp_conn()
+        if(smtp):
+            try:
+                msg_text = MIMEText(_content,'html')
+                msg_text['From'] =_from
+                msg_text['To'] = ','.join(_to)
+                msg_text['Subject'] = _subject
+                smtp.sendmail(_from,_to,msg_text.as_string())
+                return 0
+            except smtplib.SMTPException as e:
+                print(e)
+                return 1
+            else:
+                smtp.close()
+
+
+
+    def html_2(self,_from,_to,_subject,txt_content,html_content):  
+        assert type(_to) == list
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        smtp=self.get_smtp_conn()
+        if(smtp):
+            try:
+                continer=MIMEMultipart('alternatvie')
+
+                continer['From'] =_from
+                continer['To'] = ','.join(_to)
+                continer['Subject'] = _subject
+                msg_text = MIMEText(txt_content)
+                msg_html = MIMEText(html_content,'html')
+                continer.attach(msg_text)
+                continer.attach(msg_html)
+                smtp.sendmail(_from,_to,continer.as_string())
+                return 0
+            except smtplib.SMTPException as e:
+                print(e)
+                return 1
+            else:
+                smtp.close()
+
+
+    def html_3(self,_from,_to,_subject,txt_content,html_content,file):  
+        assert type(_to) == list
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        from email.mime.image import MIMEImage
+        smtp=self.get_smtp_conn()
+        if(smtp):
+            try:
+                continer=MIMEMultipart('alternatvie')
+
+                continer['From'] =_from
+                continer['To'] = ','.join(_to)
+                continer['Subject'] = _subject
+                msg_text = MIMEText(txt_content)
+                msg_html = MIMEText(html_content,'html')
+                fp = open(file,'rb')
+                msg_img = MIMEImage(fp.read())
+                msg_img.add_header('Content-ID', '<image>')  
+                continer.attach(msg_text)
+                continer.attach(msg_html)
+                continer.attach(msg_img)
+                smtp.sendmail(_from,_to,continer.as_string())
+                return 0
+            except smtplib.SMTPException as e:
+                print(e)
+                return 1
+            else:
+                smtp.close()
+
+
+class Test:
+
+    def __init__(self):
+        self.svr='smtp.126.com'
+        self.user='****'
+        self.password='****'
+        self._from='****@126.com'
+        self._to=['****@qq.com','*****@126.com']
+        self._subject='TEST'
+
+
+
+    def plain(self):
+        txt=' 测试纯文本函数:plain()'
+        sender = Send(self.svr,self.user,self.password)
+        if  sender.plain(self._from,self._to,self._subject,txt):
+            print('发送失败！')
+        else:
+            print('发送成功！')
+
+    def html_1(self):
+        htm='''
+        <h1>标题！</h1>
+
+        '''
+        sender = Send(self.svr,self.user,self.password)
+        if  sender.html_1(self._from,self._to,self._subject,htm):
+            print('发送失败！')
+        else:
+            print('发送成功！')
+
+    def html_2(self):
+        txt=' html_2......txt'
+        htm='''<h1>html_2中国......html</h1>'''
+        sender = Send(self.svr,self.user,self.password)
+        if  sender.html_2(self._from,self._to,self._subject,txt,htm):
+            print('发送失败！')
+        else:
+            print('发送成功！')
+
+    def html_3(self):
+        txt=' html_2......txt'
+        htm='''<h1>html_2中国......html</h1><img src="cid:image"/>'''
+        sender = Send(self.svr,self.user,self.password)
+        if  sender.html_3(self._from,self._to,self._subject,txt,htm,'c:\\1.jpg'):
+            print('发送失败！')
+        else:
+            print('发送成功！')
+
+
+def main():
+    T=Test()
+    #T.plain()
+    #T.html_1()
+    #T.html_2()
+    T.html_3()
+if __name__ == '__main__':
+    main()
